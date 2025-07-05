@@ -28,14 +28,11 @@ pub enum SpecialTaggedValue {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum RValue {
-    // Prioritize the Special variant during deserialization.
-    // `serde` tries to match variants in order for untagged enums. Since our
-    // `SpecialTaggedValue` is serialized as a map (e.g., `{"$R_TYPE": "NA"}`),
-    // it can be confused with the generic `Object` variant. By putting `Special`
-    // first, we instruct `serde` to check for the `$R_TYPE` tag before trying
-    // other variants, which resolves the ambiguity.
     Special(SpecialTaggedValue),
-    Integer(i32),
+    // In order to prevent incorrect type coercion of whole numbers (e.g., 1.0 -> 1L),
+    // we now handle all numbers as f64 (R's `numeric` type). The Integer
+    // variant has been removed. This ensures that `numeric` types are always
+    // preserved correctly, which is safer than losing the float type.
     Float(f64),
     Bool(bool),
     String(String),
@@ -55,13 +52,13 @@ impl RValue {
             let vals: Vec<_> = v.iter().map(|x| {
                 if x.is_na() { RValue::Special(SpecialTaggedValue::NA) } else { RValue::Bool(x.to_bool()) }
             }).collect();
-            // Return single values as-is, not as an array of one.
             if vals.len() == 1 { Ok(vals[0].clone()) } else { Ok(RValue::Array(vals)) }
         } else if robj.is_integer() {
+            // Changed to Coerce integers to f64 to handle all numbers uniformly
             if robj.len() == 0 { return Ok(RValue::Special(SpecialTaggedValue::EmptyIntegerVec)); }
             let v = robj.as_integer_vector().unwrap();
             let vals: Vec<_> = v.iter().map(|x| {
-                if x.is_na() { RValue::Special(SpecialTaggedValue::NA) } else { RValue::Integer(*x) }
+                if x.is_na() { RValue::Special(SpecialTaggedValue::NA) } else { RValue::Float(*x as f64) }
             }).collect();
             if vals.len() == 1 { Ok(vals[0].clone()) } else { Ok(RValue::Array(vals)) }
         } else if robj.is_real() {
@@ -72,9 +69,8 @@ impl RValue {
                     RValue::Special(SpecialTaggedValue::NA)
                 } else {
                     let f = *x;
-                    // Explicitly handle NaN and Inf...their bit patterns can be quite tricky
                     if f.is_nan() { RValue::Float(f64::NAN) }
-                    else if f.is_infinite() { RValue::Float(f) } // Handles Inf and -Inf
+                    else if f.is_infinite() { RValue::Float(f) }
                     else { RValue::Float(f) }
                 }
             }).collect();
@@ -107,45 +103,33 @@ impl RValue {
     /// Converts an `RValue` back into an R object (`Robj`).
     pub fn to_robj(self) -> Robj {
         match self {
-            RValue::Integer(i) => Robj::from(i),
             RValue::Float(f) => Robj::from(f),
             RValue::Bool(b) => Robj::from(b),
             RValue::String(s) => Robj::from(s),
             RValue::Special(special) => match special {
-                SpecialTaggedValue::Null => Robj::from(()), // Converts to R NULL
-                SpecialTaggedValue::NA => Robj::from(Rbool::na()), // Default to logical NA for standalone
+                SpecialTaggedValue::Null => Robj::from(()),
+                SpecialTaggedValue::NA => Robj::from(Rbool::na()),
                 SpecialTaggedValue::EmptyList => List::new(0).into(),
+                // Empty integer vectors will now become empty numeric vectors, which is safe.
+                SpecialTaggedValue::EmptyIntegerVec | SpecialTaggedValue::EmptyFloatVec => Doubles::new(0).into(),
                 SpecialTaggedValue::EmptyLogicalVec => Logicals::new(0).into(),
-                SpecialTaggedValue::EmptyIntegerVec => Integers::new(0).into(),
-                SpecialTaggedValue::EmptyFloatVec => Doubles::new(0).into(),
                 SpecialTaggedValue::EmptyStringVec => Strings::new(0).into(),
             },
             RValue::Array(arr) => {
-                // When converting an array back to an R object, we must check if it's a
-                // homogeneous array that can become an atomic vector or if it must be a generic list.
-                
-                // Check for logical vectors (Bool or NA)
                 if arr.iter().all(|x| matches!(x, RValue::Bool(_) | RValue::Special(SpecialTaggedValue::NA))) {
                     let v: Vec<_> = arr.into_iter().map(|x| match x { RValue::Bool(b) => Some(b), _ => None }).collect();
                     return Robj::from(v);
                 }
-                // Check for integer vectors (Integer or NA)
-                if arr.iter().all(|x| matches!(x, RValue::Integer(_) | RValue::Special(SpecialTaggedValue::NA))) {
-                    let v: Vec<_> = arr.into_iter().map(|x| match x { RValue::Integer(i) => Some(i), _ => None }).collect();
-                    return Robj::from(v);
-                }
-                // Check for numeric vectors (Float or NA)
+                // I removed the integer vector check so all numbers are now floats.
                 if arr.iter().all(|x| matches!(x, RValue::Float(_) | RValue::Special(SpecialTaggedValue::NA))) {
                     let v: Vec<_> = arr.into_iter().map(|x| match x { RValue::Float(f) => Some(f), _ => None }).collect();
                     return Robj::from(v);
                 }
-                // Check for character vectors (String or NA)
                 if arr.iter().all(|x| matches!(x, RValue::String(_) | RValue::Special(SpecialTaggedValue::NA))) {
                     let v: Vec<_> = arr.into_iter().map(|x| match x { RValue::String(s) => Some(s), _ => None }).collect();
                     return Robj::from(v);
                 }
                 
-                // Fallback for heterogeneous arrays: create a generic list.
                 let mut list = List::new(arr.len());
                 for (i, val) in arr.into_iter().enumerate() {
                     list.set_elt(i, val.to_robj()).unwrap();
