@@ -1,13 +1,20 @@
-# Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
-# Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+# Workflow for building and checking an R package with a Rust backend
+#
+# This workflow is based on the standard R-CMD-check workflow from r-lib/actions,
+# with a crucial addition: the "setup-rust" action...this ensures that the Rust
+# toolchain is available in the environment before R attempts to compile the package.
+
 on:
   push:
-    branches: [main, master]
+    branches:
+      - main
+      - master
   pull_request:
+    branches:
+      - main
+      - master
 
-name: R-CMD-check.yaml
-
-permissions: read-all
+name: R-CMD-check
 
 jobs:
   R-CMD-check:
@@ -19,11 +26,11 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {os: macos-latest,   r: 'release'}
+          - {os: macOS-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release'}
-          - {os: ubuntu-latest,   r: 'release'}
-          - {os: ubuntu-latest,   r: 'oldrel-1'}
+          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release'}
+          - {os: ubuntu-latest,  r: 'release'}
+          - {os: ubuntu-latest,  r: 'oldrel-1'}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -31,6 +38,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # NOTE:This sets up the Rust compiler so that the R package can build its native code.
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
 
       - uses: r-lib/actions/setup-pandoc@v2
 
@@ -48,4 +59,3 @@ jobs:
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
-          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'

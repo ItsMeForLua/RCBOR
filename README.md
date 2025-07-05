@@ -1,4 +1,6 @@
 
+[![R-CMD-check](https://github.com/ItsMeForLua/RCBOR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ItsMeForLua/RCBOR/actions/workflows/R-CMD-check.yaml)
+
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 # RCBOR: A High-Performance CBOR Toolkit for R
