@@ -7,7 +7,7 @@ test_that("Encoding and decoding preserves basic types", {
   expect_identical(decode(encode(TRUE)), TRUE)
   expect_identical(decode(encode(FALSE)), FALSE)
   
-  # FIX: Integers are now correctly promoted to numeric (double) for type safety.
+  # Integers are now correctly promoted to numeric (double) for type safety.
   # The test now checks for the correct numeric output.
   expect_identical(decode(encode(10L)), 10.0)
   
@@ -16,7 +16,7 @@ test_that("Encoding and decoding preserves basic types", {
 })
 
 test_that("Atomic vectors are handled correctly", {
-  # FIX: Integer vectors become numeric vectors.
+  # Integer vectors become numeric vectors.
   expect_identical(decode(encode(c(1L, 2L, 3L))), c(1.0, 2.0, 3.0))
   
   expect_identical(decode(encode(c(1.1, 2.2, 3.3))), c(1.1, 2.2, 3.3))
@@ -27,7 +27,7 @@ test_that("Atomic vectors are handled correctly", {
 test_that("NA, NaN, and Inf values are preserved", {
   expect_identical(decode(encode(c(TRUE, NA, FALSE))), c(TRUE, NA, FALSE))
   
-  # FIX: Integer vectors with NA become numeric vectors with NA.
+  # Integer vectors with NA become numeric vectors with NA.
   expect_identical(decode(encode(c(1L, NA_integer_, 3L))), c(1.0, NA, 3.0))
   
   expect_identical(decode(encode(c("a", NA_character_, "c"))), c("a", NA_character_, "c"))
@@ -37,7 +37,7 @@ test_that("NA, NaN, and Inf values are preserved", {
 })
 
 test_that("Lists and Objects are handled correctly", {
-  # FIX: Integers inside lists become numerics.
+  # Integers inside lists become numerics.
   unnamed_list <- list(1.0, "two", TRUE, list(NA, NULL))
   expect_identical(decode(encode(unnamed_list)), unnamed_list)
 
@@ -57,7 +57,7 @@ test_that("Empty structures work", {
   expect_identical(decode(encode(list())), list())
   expect_identical(decode(encode(character())), character())
   
-  # FIX: Empty integer vectors become empty numeric vectors.
+  # Empty integer vectors become empty numeric vectors.
   expect_identical(decode(encode(integer())), numeric())
   
   expect_identical(decode(encode(numeric())), numeric())
