@@ -7,3 +7,5 @@
 ^src/Makevars\.win$
 ^README\.Rmd$
 ^\.github$
+^LICENSE\.md$
+^RCBOR\.code-workspace$
