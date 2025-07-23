@@ -1,15 +1,26 @@
 Package: RCBOR
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
+Title: A High-Performance Toolkit for Concise Binary Object Representation (CBOR)
+Version: 0.1.0
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+    person("Andrew", "France", 
+           email = "andrewforlua@gmail.com", 
+           role = c("aut", "cre"))
+Description: Provides a fast and efficient bridge between R and the Concise
+    Binary Object Representation (CBOR), a binary data format defined in
+    Bormann and Hoffman (2020) <doi:10.17487/RFC8949>. The core serialization
+    and deserialization logic is implemented in 'Rust' for maximum performance
+    and safety, making it ideal for applications where data transfer speed and
+    low overhead are critical. The package provides two primary functions:
+    `encode()` to serialize R objects into raw byte vectors and `decode()`
+    to deserialize them back into R objects.
 License: LGPL (>= 3)
 Encoding: UTF-8
+URL: https://github.com/ItsMeForLua/RCBOR
+BugReports: https://github.com/ItsMeForLua/RCBOR/issues
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Config/rextendr/version: 0.4.1
-SystemRequirements: Cargo (Rust's package manager), rustc
+SystemRequirements: Cargo (Rust's package manager) and a rustc compiler
 Depends: 
     R (>= 4.2)
 Suggests: 
